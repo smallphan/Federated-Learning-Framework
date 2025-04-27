@@ -1,0 +1,11 @@
+server:
+  host: 127.0.0.1
+  port: 9000
+
+train:
+  device: cuda
+  num_clients: 5
+  timeout: 90
+  num_rounds: 100
+  end_loss: 0.001
+  round_sep: 5

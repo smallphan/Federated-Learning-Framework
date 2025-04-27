@@ -1,0 +1,11 @@
+server:
+  host: 127.0.0.1
+  port: 9000
+
+train:
+  device: cuda
+  num_epochs: 5
+  learning_rate: 0.001
+  batch_size: 128
+  optimizer: Adam
+  criterion: CrossEntropyLoss

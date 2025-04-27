@@ -48,3 +48,43 @@ def aggregate_state_dicts(
           result[key] += sd[key] * w
                 
     return result
+
+
+def model_quantization(
+  state_dict: dict
+) -> dict:
+  """
+  Quantize model parameters from float32 to float16 to reduce communication overhead.
+  
+  Args:
+      state_dict (dict): Model state dictionary with float32 parameters
+  
+  Returns:
+      dict: Quantized state dictionary with float16 parameters
+  """
+  quantization_dict = {}
+  for key, tensor in state_dict.items():
+    tensor: torch.Tensor
+    quantization_dict[key] = tensor.to(torch.float16)
+  return quantization_dict
+
+
+def model_dequantization(
+  state_dict: dict
+) -> dict:
+  """
+  Dequantize model parameters from float16 back to float32 for computation.
+  
+  Args:
+      state_dict (dict): Model state dictionary with float16 parameters
+  
+  Returns:
+      dict: Dequantized state dictionary with float32 parameters
+  """
+  dequantization_dict = {}
+  for key, tensor in state_dict.items():
+    tensor: torch.Tensor
+    dequantization_dict[key] = tensor.to(torch.float32)
+  return dequantization_dict
+
+

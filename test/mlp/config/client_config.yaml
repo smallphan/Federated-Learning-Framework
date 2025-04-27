@@ -1,0 +1,11 @@
+server:
+  host: 127.0.0.1
+  port: 9000
+
+train:
+  device: cuda
+  num_epochs: 40
+  learning_rate: 0.001
+  batch_size: 30
+  optimizer: Adam
+  criterion: MSELoss

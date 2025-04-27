@@ -19,9 +19,9 @@ class Server():
     Initialize the FL server.
     
     Args:
-        model (nn.Module): The PyTorch model to be trained
-        host (str): Server host address
-        port (int): Server port number
+      model (nn.Module): The PyTorch model to be trained
+      host (str): Server host address
+      port (int): Server port number
     """
     with open(config_file, 'r') as file:       
       config = yaml.safe_load(file)
@@ -49,8 +49,8 @@ class Server():
     Handle a new client connection.
     
     Args:
-        reader (asyncio.StreamReader): Stream reader for the client connection
-        writer (asyncio.StreamWriter): Stream writer for the client connection
+      reader (asyncio.StreamReader): Stream reader for the client connection
+      writer (asyncio.StreamWriter): Stream writer for the client connection
     """
     address = writer.get_extra_info('peername')
     self.clients[address] = (reader, writer)
@@ -77,11 +77,11 @@ class Server():
     Send model parameters to a client.
     
     Args:
-        writer (asyncio.StreamWriter): Stream writer for the client connection
-        state_dict (dict): Model state dictionary to send
+      writer (asyncio.StreamWriter): Stream writer for the client connection
+      state_dict (dict): Model state dictionary to send
     """
     try:
-      serialized_data = pickle.dumps(state_dict)
+      serialized_data = pickle.dumps(fedavg.model_quantization(state_dict))
       writer.write(len(serialized_data).to_bytes(4, 'big'))
       await writer.drain()
       writer.write(serialized_data)
@@ -98,20 +98,20 @@ class Server():
     Receive model parameters from a client.
     
     Args:
-        reader (asyncio.StreamReader): Stream reader for the client connection
+      reader (asyncio.StreamReader): Stream reader for the client connection
     
     Returns:
-        dict: Model state dictionary received from the client
+      dict: Model state dictionary received from the client
     """
     try:
-      stream_length = await reader.read(4)
+      stream_length = await reader.readexactly(4)
       if not stream_length:
         raise ConnectionError
       
       stream_length = int.from_bytes(stream_length, 'big')
 
-      serialized_data = await reader.read(stream_length)
-      return pickle.loads(serialized_data)
+      serialized_data = await reader.readexactly(stream_length)
+      return fedavg.model_dequantization(pickle.loads(serialized_data))
 
     except Exception as error:
       print(f'recv_model_params exception: {error}')
@@ -125,8 +125,8 @@ class Server():
     Broadcast the current model parameters to a client and receive updated parameters.
     
     Args:
-        reader (asyncio.StreamReader): Stream reader for the client connection
-        writer (asyncio.StreamWriter): Stream writer for the client connection
+      reader (asyncio.StreamReader): Stream reader for the client connection
+      writer (asyncio.StreamWriter): Stream writer for the client connection
     """
     try:
       await self.send_model_params(writer, self.model.state_dict())
@@ -161,7 +161,7 @@ class Server():
           await asyncio.gather(*tasks_list)
         
         if len(self.model_list) != 0:
-          self.model.load_state_dict(fedavg.aggregate_state_dicts(self.model_list))
+          self.model.load_state_dict(self.model_list)
 
 
       except asyncio.TimeoutError as error:
@@ -175,7 +175,7 @@ class Server():
     """
     Start the server and listen for incoming client connections.
     """
-    server = await asyncio.start_server(self.handle_client, self.host, self.port)
+    server = await asyncio.start_server(self.handle_client, self.host, self.port, limit = 1048576)
     print(f'Server has been started, listening on {self.host}:{self.port}.')
     async with server:
       await server.serve_forever()
