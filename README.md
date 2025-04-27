@@ -118,11 +118,3 @@ The framework is designed to be easily extensible:
 2. Create custom datasets in the `src/dataset/` directory
 3. Modify federated learning algorithms in `src/utils/fedavg.py`
 4. Configure training parameters in the YAML configuration files
-
-## License
-
-[Your License Here]
-
-## Contributing
-
-[Your Contributing Guidelines Here]
