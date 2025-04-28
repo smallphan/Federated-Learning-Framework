@@ -36,8 +36,8 @@ test/
 
 1. Clone the repository:
 ```bash
-git clone [repository-url]
-cd Federated-SleepNet
+git clone git@github.com:smallphan/Federated-Learning-Framework.git
+cd Federated-Learning-Framework
 ```
 
 2. Install the required packages:
