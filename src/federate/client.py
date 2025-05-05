@@ -35,6 +35,7 @@ class Client():
     
     self.server_host:   str       = config['server']['host']
     self.server_port:   int       = config['server']['port']
+    self.server_psword: str       = str(config['server']['psword'])
 
     self.num_epochs:    int       = config['train']['num_epochs']
     self.learning_rate: float     = config['train']['learning_rate']
@@ -59,7 +60,12 @@ class Client():
       state_dict (dict): Model state dictionary
     """
     try:
-      serialized_data = pickle.dumps(fedavg.model_quantization(state_dict))
+      serialized_data = fedavg.model_encode(
+        pickle.dumps(
+          fedavg.model_quantization(state_dict)
+        ),
+        self.server_psword
+      )
       writer.write(len(serialized_data).to_bytes(4, 'big'))
       await writer.drain()
       writer.write(serialized_data)
@@ -89,7 +95,14 @@ class Client():
       stream_length = int.from_bytes(stream_length, 'big')
 
       serialized_data = await reader.readexactly(stream_length)
-      return fedavg.model_dequantization(pickle.loads(serialized_data))
+      return fedavg.model_dequantization(
+        pickle.loads(
+          fedavg.model_decode(
+            serialized_data,
+            self.server_psword
+          )
+        )
+      )
 
     except Exception as error:
       print(f'Exception: {error}')

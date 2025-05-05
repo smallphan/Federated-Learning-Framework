@@ -1,5 +1,9 @@
 import torch
 import copy
+import base64
+from cryptography.fernet import Fernet
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
 def state_dict_zeros_like(
   state_dict: dict
@@ -88,3 +92,59 @@ def model_dequantization(
   return dequantization_dict
 
 
+def _get_key(
+  psword: str
+) -> bytes:
+  """
+  Generate an encryption key from a password using PBKDF2.
+  
+  Args:
+      psword (str): Password string for key generation
+  
+  Returns:
+      bytes: 32-byte key suitable for Fernet encryption
+  """
+  kdf = PBKDF2HMAC(
+    algorithm   = hashes.SHA256(),
+    length      = 32,
+    salt        = b'federated_learning', 
+    iterations  = 100000,
+  )
+  key = base64.urlsafe_b64encode(kdf.derive(psword.encode()))
+  return key
+
+
+def model_encode(
+  data: bytes, 
+  psword: str
+) -> bytes:
+  """
+  Encrypt serialized model data using Fernet symmetric encryption.
+  
+  Args:
+      data (bytes): Serialized model data (from pickle.dumps)
+      psword (str): Password for encryption
+  
+  Returns:
+      bytes: Encrypted data
+  """
+  f = Fernet(_get_key(psword))
+  return f.encrypt(data)
+
+
+def model_decode(
+  encrypted_data: bytes, 
+  psword: str
+) -> bytes:
+  """
+  Decrypt encrypted model data using Fernet symmetric encryption.
+  
+  Args:
+      encrypted_data (bytes): Encrypted model data
+      psword (str): Password for decryption
+  
+  Returns:
+      bytes: Decrypted serialized data (for pickle.loads)
+  """
+  f = Fernet(_get_key(psword))
+  return f.decrypt(encrypted_data)

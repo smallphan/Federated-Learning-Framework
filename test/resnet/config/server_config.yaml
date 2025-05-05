@@ -1,6 +1,7 @@
 server:
   host: 127.0.0.1
   port: 9000
+  psword: 12345678
 
 train:
   device: cuda

@@ -31,6 +31,7 @@ class Server():
 
     self.host:        str = config['server']['host']
     self.port:        int = config['server']['port']
+    self.psword:      str = str(config['server']['psword'])
 
     self.timeout:     int = config['train']['timeout']
     self.num_rounds:  int = config['train']['num_rounds']
@@ -81,7 +82,12 @@ class Server():
       state_dict (dict): Model state dictionary to send
     """
     try:
-      serialized_data = pickle.dumps(fedavg.model_quantization(state_dict))
+      serialized_data = fedavg.model_encode(
+        pickle.dumps(
+          fedavg.model_quantization(state_dict)
+        ),
+        self.psword
+      )
       writer.write(len(serialized_data).to_bytes(4, 'big'))
       await writer.drain()
       writer.write(serialized_data)
@@ -111,7 +117,14 @@ class Server():
       stream_length = int.from_bytes(stream_length, 'big')
 
       serialized_data = await reader.readexactly(stream_length)
-      return fedavg.model_dequantization(pickle.loads(serialized_data))
+      return fedavg.model_dequantization(
+        pickle.loads(
+          fedavg.model_decode(
+            serialized_data,
+            self.psword
+          )
+        )
+      )
 
     except Exception as error:
       print(f'recv_model_params exception: {error}')
@@ -161,7 +174,9 @@ class Server():
           await asyncio.gather(*tasks_list)
         
         if len(self.model_list) != 0:
-          self.model.load_state_dict(self.model_list)
+          self.model.load_state_dict(
+            fedavg.aggregate_state_dicts(self.model_list)
+          )
 
 
       except asyncio.TimeoutError as error:
